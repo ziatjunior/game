@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo das Cores</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 80vw;
+            height: 70vh;
+            border: 2px solid #000;
+            overflow: hidden;
+            background-color: #fff;
+        }
+        .shape {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .shape.correct {
+            background-color: green;
+        }
+        .shape.incorrect {
+            background-color: red;
+        }
+        #instruction {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        #score {
+            font-size: 20px;
+            margin-top: 20px;
+        }
+        #progress-bar-container {
+            width: 80%;
+            height: 20px;
+            background-color: #ddd;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+            display: none;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 100%;
+            background-color: #007bff;
+            border-radius: 10px;
+            transition: width 1s linear;
+        }
+        #play-button {
+            font-size: 24px;
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        #play-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <button id="play-button">Play</button>
+    <div id="instruction" style="display: none;">Clique na forma de cor: <span id="color-name"></span></div>
+    <div id="game-container" style="display: none;"></div>
+    <div id="score" style="display: none;">Pontos: 0</div>
+    <div id="progress-bar-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <!-- Áudios para as cores -->
+    <audio id="audio-vermelho" src="audios/vermelho.mp3"></audio>
+    <audio id="audio-azul" src="audios/azul.mp3"></audio>
+    <audio id="audio-verde" src="audios/verde.mp3"></audio>
+    <audio id="audio-amarelo" src="audios/amarelo.mp3"></audio>
+    <audio id="audio-roxo" src="audios/roxo.mp3"></audio>
+    <audio id="audio-laranja" src="audios/laranja.mp3"></audio>
+
+    <script>
+        const playButton = document.getElementById('play-button');
+        const gameContainer = document.getElementById('game-container');
+        const instruction = document.getElementById('instruction');
+        const colorName = document.getElementById('color-name');
+        const scoreDisplay = document.getElementById('score');
+        const progressBarContainer = document.getElementById('progress-bar-container');
+        const progressBar = document.getElementById('progress-bar');
+        let score = 0;
+        let timeLeft = 30;
+        let timerInterval;
+
+        const colors = ['vermelho', 'azul', 'verde', 'amarelo', 'roxo', 'laranja'];
+        const colorMap = {
+            'vermelho': 'red',
+            'azul': 'blue',
+            'verde': 'green',
+            'amarelo': 'yellow',
+            'roxo': 'purple',
+            'laranja': 'orange'
+        };
+
+        function getRandomColor() {
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function getRandomPosition(shapeSize) {
+            const containerWidth = gameContainer.clientWidth;
+            const containerHeight = gameContainer.clientHeight;
+            const randomX = Math.floor(Math.random() * (containerWidth - shapeSize));
+            const randomY = Math.floor(Math.random() * (containerHeight - shapeSize));
+            return { x: randomX, y: randomY };
+        }
+
+        function createShape(color, shapeSize) {
+            const shape = document.createElement('div');
+            shape.classList.add('shape');
+            shape.style.width = `${shapeSize}px`;
+            shape.style.height = `${shapeSize}px`;
+            const { x, y } = getRandomPosition(shapeSize);
+            shape.style.left = `${x}px`;
+            shape.style.top = `${y}px`;
+            shape.style.backgroundColor = colorMap[color];
+            shape.dataset.color = color;
+            gameContainer.appendChild(shape);
+
+            shape.addEventListener('click', () => {
+                if (shape.dataset.color === currentColor) {
+                    score++;
+                    scoreDisplay.textContent = `Pontos: ${score}`;
+                    shape.classList.add('correct');
+                    setTimeout(() => {
+                        shape.classList.remove('correct');
+                        resetGame();
+                    }, 300);
+                } else {
+                    shape.classList.add('incorrect');
+                    setTimeout(() => {
+                        shape.classList.remove('incorrect');
+                    }, 300);
+                }
+            });
+        }
+
+        function playColorAudio(color) {
+            const audio = document.getElementById(`audio-${color}`);
+            audio.currentTime = 0;  // Reiniciar o áudio para garantir que ele sempre toque
+            audio.play();
+        }
+
+        function resetGame() {
+            gameContainer.innerHTML = '';
+            currentColor = getRandomColor();
+            colorName.textContent = currentColor;
+
+            // Tocar o áudio da cor atual
+            playColorAudio(currentColor);
+
+            const shapeSize = Math.max(100 - Math.floor(score / 5) * 10, 50);
+            const numShapes = Math.min(5 + Math.floor(score / 5), 15);
+
+            // Criar múltiplas formas com cores aleatórias
+            for (let i = 0; i < numShapes; i++) {
+                createShape(getRandomColor(), shapeSize);
+            }
+            // Assegurar que a cor solicitada sempre apareça
+            createShape(currentColor, shapeSize);
+        }
+
+        function startProgressBar() {
+            let width = 100;
+            progressBar.style.width = `${width}%`;
+            timerInterval = setInterval(() => {
+                width--;
+                progressBar.style.width = `${width}%`;
+                if (width <= 0) {
+                    clearInterval(timerInterval);
+                    gameOver();
+                }
+            }, 300);
+        }
+
+        function gameOver() {
+            alert(`Fim de jogo! Sua pontuação: ${score}`);
+            playButton.style.display = 'block';
+            instruction.style.display = 'none';
+            gameContainer.style.display = 'none';
+            scoreDisplay.style.display = 'none';
+            progressBarContainer.style.display = 'none';
+            score = 0;
+        }
+
+        playButton.addEventListener('click', () => {
+            playButton.style.display = 'none';
+            instruction.style.display = 'block';
+            gameContainer.style.display = 'block';
+            scoreDisplay.style.display = 'block';
+            progressBarContainer.style.display = 'block';
+            resetGame();
+            startProgressBar();
+        });
+    </script>
+</body>
+</html>
